@@ -1,0 +1,116 @@
+﻿
+@{
+    ViewBag.Title = "Home Page";
+}
+
+<form>
+    <label data-bind="text:id"></label>
+    <div class="form-group">
+        <label>Nome</label>
+        <input data-bind="value:produtoName" type="text" class="form-control" placeholder="Nome">
+    </div>
+    <div class="form-group">
+        <label>Valor</label>
+        <input data-bind="value:produtoValor" type="text" class="form-control" placeholder="Valor">
+    </div>
+    <button data-bind="click:criar" type="button" class="btn btn-primary">Salvar</button>
+    <br />
+    <br />
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Nome</th>
+                <th scope="col">Valor</th>
+                <th scope="col">Opções</th>
+            </tr>
+        </thead>
+        <tbody data-bind="foreach:lista">
+            <tr>
+                <th data-bind="text:$index" scope="row"></th>
+                <td data-bind="text:Nome"></td>
+                <td data-bind="text:Valor"></td>
+                <td>
+                    <button data-bind="click: $root.editar" type="button" class="btn btn-dark">Editar</button>
+                    <button data-bind="click: $root.apagar" type="button" class="btn btn-danger">Apagar</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</form>
+
+
+@section scripts
+{
+    <script type="text/javascript">
+
+        function Model(id,Nome, Valor){
+
+            this.id = id;
+            this.Nome = ko.observable(Nome);
+            this.Valor = ko.observable(Valor);
+        }
+               
+        function viewModel() {
+
+            var self = this;
+            self.id = ko.observable();
+            self.produtoName = ko.observable();
+            self.produtoValor = ko.observable();
+
+            self.lista = ko.observableArray([]);
+
+            self.carregar = function () {
+                $.post("/Home/GetLista").then(function (dados) {
+                    self.lista(dados)                  
+                }).catch(function (err) {
+                    console.error('Oh não!!', err.statusText);
+                });
+            };
+            self.criar = function () {
+
+                if (self.id() == null) {
+                    var model = new Model(-1, self.produtoName(), self.produtoValor());
+                } else {
+                    var model = new Model(self.id, self.produtoName(), self.produtoValor());
+                }
+
+                $.post("/Home/Create", model).then(function (dados) {
+                    self.produtoName("");
+                    self.produtoValor("");
+                    self.id("");
+                    self.carregar();                    
+                }).catch(function (err) {
+                    console.error('Oh não!!', err.statusText);
+                });
+
+            };
+            self.editar = function (item) {
+
+                var model = ko.toJS(item);
+
+
+                self.id(model.ID);
+                self.produtoName(model.Nome);
+                self.produtoValor(model.Valor);
+
+             
+            }
+            self.apagar = function (item) {
+                var model = ko.toJS(item);
+                $.post("/Home/Apagar", model).then(function (dados) {
+                    console.log(dados)
+                    self.carregar();
+                }).catch(function (err) {
+                    console.error('Oh não!!', err.statusText);
+                });
+            }
+
+        }
+
+        vm = new viewModel();    
+        ko.applyBindings(vm); 
+        vm.carregar();       
+
+    </script>
+}
